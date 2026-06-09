@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sınav Notu Sorgulama</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        
+        .container {
+            background-color: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        h2 {
+            color: #333;
+            margin-top: 0;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            margin: 20px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 16px;
+            text-align: center;
+        }
+        
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: 0.3s;
+        }
+        
+        button:hover {
+            background-color: #0056b3;
+        }
+        
+        #sonuc {
+            margin-top: 25px;
+            font-size: 18px;
+        }
+        
+        .hata {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
+        .basari {
+            color: #28a745;
+        }
+        
+        .not-deger {
+            font-size: 24px;
+            font-weight: bold;
+            display: block;
+            margin-top: 10px;
+        }
+        
+        .karne-tablosu {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 15px;
+        }
+        
+        .karne-tablosu th,
+        .karne-tablosu td {
+            border: 1px solid #ddd;
+            padding: 10px 5px;
+            text-align: center;
+        }
+        
+        .karne-tablosu th {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        .karne-tablosu .ders-adi {
+            text-align: left;
+            font-weight: bold;
+            background-color: #f9f9f9;
+            padding-left: 10px;
+        }
+        
+        .toplam-satir {
+            font-weight: bold;
+            background-color: #e9ecef;
+        }
+        
+        .toplam-satir .ders-adi {
+            background-color: #e9ecef;
+        }
+        
+        .puan-kutusu {
+            background-color: #e8f4f8;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-weight: bold;
+            color: #0056b3;
+        }
+        
+        .sira-kutusu {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+            font-size: 14px;
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 5px;
+            border: 1px solid #eee;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h2>Deneme Sınavı Sorgulama</h2>
+        <p style="color: #666; font-size: 14px;">Sonucunuzu görmek için Öğrenci No veya TC giriniz.</p>
+
+        <input type="text" id="tcInput" placeholder="Öğrenci No veya TC">
+        <button onclick="notGetir()">Sorgula</button>
+
+        <div id="sonuc"></div>
+    </div>
+
+    <script>
+        async function notGetir() {
+            const tc = document.getElementById('tcInput').value.trim();
+            const sonucDiv = document.getElementById('sonuc');
+
+            sonucDiv.innerHTML = "Sorgulanıyor...";
+            sonucDiv.className = "";
+
+            if (!tc) {
+                sonucDiv.innerHTML = "Lütfen geçerli bir numara giriniz.";
+                sonucDiv.className = "hata";
+                return;
+            }
+
+            try {
+                // Girilen TC'yi anında şifrele (SHA-256)
+                const msgUint8 = new TextEncoder().encode(tc);
+                const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                const girilenTcHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+                // JSON'daki verileri getir
+                const ogrenciResponse = await fetch('ogrenciler.json');
+                const ogrenciler = await ogrenciResponse.json();
+
+                // Şifreli TC'yi eşleştiriyoruz
+                const bulunanOgrenci = ogrenciler.find(ogr => ogr.tc_hash === girilenTcHash);
+
+                if (!bulunanOgrenci) {
+                    sonucDiv.innerHTML = "Sisteme kayıtlı böyle bir TC bulunamadı.";
+                    sonucDiv.className = "hata";
+                    return;
+                }
+
+                const notlarResponse = await fetch('notlar.json');
+                const notlar = await notlarResponse.json();
+
+                // Yeni notlar.json formatında "Ad Soyad" key'i üzerinden buluyoruz
+                const temizle = (metin) => {
+                    return metin.toLocaleLowerCase('tr-TR')
+                        .replace(/ı/g, 'i').replace(/i̇/g, 'i')
+                        .replace(/ğ/g, 'g').replace(/ü/g, 'u')
+                        .replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c');
+                };
+
+                const adSoyad = temizle(bulunanOgrenci.ad + " " + bulunanOgrenci.soyad);
+                const hedefKelimeler = adSoyad.split(/\s+/);
+                const hedefSoyad = hedefKelimeler[hedefKelimeler.length - 1];
+
+                let foundKey = Object.keys(notlar).find(k => {
+                    const jsonAdSoyad = temizle(k);
+
+                    if (jsonAdSoyad === adSoyad) return true;
+                    if (jsonAdSoyad.replace(/\s/g, '') === adSoyad.replace(/\s/g, '')) return true;
+
+                    const jsonKelimeler = jsonAdSoyad.split(/\s+/);
+                    const jsonSoyad = jsonKelimeler[jsonKelimeler.length - 1];
+
+                    if (hedefSoyad === jsonSoyad) {
+                        return jsonKelimeler.some(kelime => kelime !== jsonSoyad && hedefKelimeler.includes(kelime));
+                    }
+                    return false;
+                });
+
+                if (!foundKey) {
+                    sonucDiv.innerHTML = `Sayın ${bulunanOgrenci.ad} ${bulunanOgrenci.soyad}, adınıza ait sonuç bulunamadı.`;
+                    sonucDiv.className = "hata";
+                    return;
+                }
+
+                const rawString = notlar[foundKey];
+                // PDF'ten gelen eksik/bitişik eksi işaretlerini (örn: 10-1,33 -> 10 -1,33) düzeltir
+                const fixedString = rawString.replace(/(\d)-(\d)/g, '$1 -$2');
+                const parts = fixedString.trim().split(/\s+/);
+
+                if (parts.length < 29) {
+                    sonucDiv.innerHTML = "Sınav verileriniz hatalı veya eksik okundu.";
+                    sonucDiv.className = "hata";
+                    return;
+                }
+
+                const ogrNo = parts[0];
+                const sinif = parts[2];
+                const kt = parts[3];
+
+                const lgsPuan = parts[25];
+                const gnls = parts[26];
+                const snfs = parts[27];
+                const krms = parts[28];
+
+                let detayHtml = `
+                    <div style="text-align:center; margin-bottom:15px; font-size:15px; color:#555;">
+                        <span><strong>Öğr No:</strong> ${ogrNo}</span> &nbsp;|&nbsp; 
+                        <span><strong>Sınıf:</strong> ${sinif}</span> &nbsp;|&nbsp; 
+                        <span><strong>Kitapçık:</strong> ${kt}</span>
+                    </div>
+                    
+                    <div class="puan-kutusu">
+                        <span>LGS Puanı: <span style="font-size:28px; display:block;">${lgsPuan}</span></span>
+                    </div>
+
+                    <div class="sira-kutusu">
+                        <span><strong>Genel Sıra:</strong> ${gnls}</span>
+                        <span><strong>Kurum Sıra:</strong> ${krms}</span>
+                        <span><strong>Sınıf Sıra:</strong> ${snfs}</span>
+                    </div>
+
+                    <table class="karne-tablosu">
+                        <tr>
+                            <th>Ders</th>
+                            <th>D</th>
+                            <th>Y</th>
+                            <th>Net</th>
+                        </tr>
+                        <tr>
+                            <td class="ders-adi">Türkçe</td>
+                            <td>${parts[4]}</td><td>${parts[5]}</td><td>${parts[6]}</td>
+                        </tr>
+                        <tr>
+                            <td class="ders-adi">İnkılap Tarihi</td>
+                            <td>${parts[7]}</td><td>${parts[8]}</td><td>${parts[9]}</td>
+                        </tr>
+                        <tr>
+                            <td class="ders-adi">Din Kültürü</td>
+                            <td>${parts[10]}</td><td>${parts[11]}</td><td>${parts[12]}</td>
+                        </tr>
+                        <tr>
+                            <td class="ders-adi">Yabancı Dil</td>
+                            <td>${parts[13]}</td><td>${parts[14]}</td><td>${parts[15]}</td>
+                        </tr>
+                        <tr>
+                            <td class="ders-adi">Matematik</td>
+                            <td>${parts[16]}</td><td>${parts[17]}</td><td>${parts[18]}</td>
+                        </tr>
+                        <tr>
+                            <td class="ders-adi">Fen Bilimleri</td>
+                            <td>${parts[19]}</td><td>${parts[20]}</td><td>${parts[21]}</td>
+                        </tr>
+                        <tr class="toplam-satir">
+                            <td class="ders-adi">TOPLAM</td>
+                            <td>${parts[22]}</td><td>${parts[23]}</td><td>${parts[24]}</td>
+                        </tr>
+                    </table>
+                `;
+
+                sonucDiv.innerHTML = `<h3 style="margin-bottom:10px; color:#333;">Sayın ${bulunanOgrenci.ad} ${bulunanOgrenci.soyad}</h3>${detayHtml}`;
+                sonucDiv.className = "basari";
+
+            } catch (hata) {
+                console.error("Hata: ", hata);
+                sonucDiv.innerHTML = "Sistem hatası. Lütfen daha sonra tekrar deneyin.";
+                sonucDiv.className = "hata";
+            }
+        }
+    </script>
+</body>
+
+</html>
