@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sınav Notu Sorgulama</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -45,6 +46,7 @@
             box-sizing: border-box;
             font-size: 16px;
             text-align: center;
+            font-weight: bold;
         }
         
         button {
@@ -56,6 +58,7 @@
             border-radius: 5px;
             cursor: pointer;
             font-size: 16px;
+            font-weight: bold;
             transition: 0.3s;
         }
         
@@ -145,13 +148,13 @@
 
         .tebrik-kutusu {
             position: relative;
-            background-color: #fdfdfd;
-            border: 2px solid #ffd700;
+            background-image: linear-gradient(135deg, #fffcf0, #ffffff);
+            border: 3px solid #ffd700;
             padding: 20px;
             border-radius: 10px;
             text-align: center;
-            margin: 20px 0;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin: 25px 0;
+            box-shadow: 0 8px 25px rgba(255, 215, 0, 0.25);
             overflow: hidden;
         }
         
@@ -280,14 +283,33 @@
                 const gnls = parts[26];
 
                 let tebrikHtml = '';
-                // Eğer öğrencinin genel sırası 50 ve altındaysa kutuyu göster
+                // Eğer öğrencinin genel sırası 50 ve altındaysa kutuyu ve animasyonu göster
                 if (parseInt(gnls) <= 50) {
                     tebrikHtml = `
                         <div class="tebrik-kutusu">
                             <div class="kurdele">TEBRİKLER</div>
-                            <div class="on-kayit-mesaj">🎉 Ön Kayıta Hak Kazandınız! 🎉</div>
+                            <div class="on-kayit-mesaj">🎉 Ön Kayıt Hakkı Kazandınız! 🎉</div>
                         </div>
                     `;
+
+                    // Ekranda kurdele (konfeti) patlatma efekti
+                    setTimeout(() => {
+                        var duration = 3 * 1000;
+                        var animationEnd = Date.now() + duration;
+                        var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999, colors: ['#e74c3c', '#ffd700', '#28a745', '#007bff'] };
+
+                        function randomInRange(min, max) { return Math.random() * (max - min) + min; }
+
+                        var interval = setInterval(function() {
+                            var timeLeft = animationEnd - Date.now();
+                            if (timeLeft <= 0) { return clearInterval(interval); }
+                            var particleCount = 50 * (timeLeft / duration);
+                            if (typeof confetti === 'function') {
+                                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+                                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+                            }
+                        }, 250);
+                    }, 100);
                 }
 
                 let detayHtml = `
@@ -348,7 +370,7 @@
 
             } catch (hata) {
                 console.error("Hata: ", hata);
-                sonucDiv.innerHTML = "Sistem Hatası: " + hata.message + "<br><br><small style='color:#666;'>Not: F12 tuşuna basıp Console sekmesinden detaylara bakabilirsiniz.</small>";
+                sonucDiv.innerHTML = "Sistem hatası. Lütfen daha sonra tekrar deneyin.";
                 sonucDiv.className = "hata";
             }
         }
