@@ -185,7 +185,7 @@
         <h2>Deneme Sınavı Sorgulama</h2>
         <p style="color: #666; font-size: 14px;">Sonucunuzu görmek için TC giriniz.</p>
 
-        <input type="text" id="tcInput" placeholder="Öğrenci No veya TC">
+        <input type="text" id="tcInput" placeholder="TC">
         <button onclick="notGetir()">Sorgula</button>
 
         <div id="sonuc"></div>
@@ -348,7 +348,7 @@
 
             } catch (hata) {
                 console.error("Hata: ", hata);
-                sonucDiv.innerHTML = "Sistem hatası. Lütfen daha sonra tekrar deneyin.";
+                sonucDiv.innerHTML = "Sistem Hatası: " + hata.message + "<br><br><small style='color:#666;'>Not: F12 tuşuna basıp Console sekmesinden detaylara bakabilirsiniz.</small>";
                 sonucDiv.className = "hata";
             }
         }
