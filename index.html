@@ -53,11 +53,20 @@
             border-radius: 5px;
             cursor: pointer;
             font-size: 16px;
-            transition: 0.3s;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 123, 255, 0.2);
+            font-weight: bold;
         }
         
         button:hover {
             background-color: #0056b3;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 15px rgba(0, 123, 255, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
         }
         
         #sonuc {
@@ -135,14 +144,65 @@
             border-radius: 5px;
             border: 1px solid #eee;
         }
+        
+        .okul-adi {
+            color: #1565c0;
+            font-size: 32px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.15);
+            font-weight: 900;
+        }
+
+        .aciklama {
+            color: #d32f2f;
+            font-size: 15px;
+            font-weight: bold;
+            background-color: #fff3f3;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px dashed #f44336;
+            margin-bottom: 25px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(244, 67, 54, 0.15);
+        }
+
+        .kurdele-container {
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .kurdele {
+            background: linear-gradient(45deg, #ff9800, #ff5722);
+            color: white;
+            padding: 12px 25px;
+            font-size: 17px;
+            font-weight: bold;
+            display: inline-block;
+            border-radius: 4px;
+            box-shadow: 0 4px 10px rgba(255, 87, 34, 0.4);
+            animation: pulse 1.5s infinite alternate;
+            border: 2px dashed rgba(255, 255, 255, 0.6);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 4px 10px rgba(255, 87, 34, 0.4); }
+            100% { transform: scale(1.05); box-shadow: 0 8px 20px rgba(255, 87, 34, 0.6); }
+        }
     </style>
+    <!-- Harici Şifreleme Kütüphanesi (Sistem hatalarını önlemek için eklendi) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 </head>
 
 <body>
 
     <div class="container">
+        <h1 class="okul-adi">Nazlı İrfan ÖNAL</h1>
         <h2>Deneme Sınavı Sorgulama</h2>
-        <p style="color: #666; font-size: 14px;">Sonucunuzu görmek için Öğrenci No veya TC giriniz.</p>
+        <div class="aciklama">
+            ⚠️ Sınav sonucunuzu ve detaylı karnenizi görmek için lütfen T.C. Kimlik Numaranızı giriniz!
+        </div>
 
         <input type="text" id="tcInput" placeholder="Öğrenci No veya TC">
         <button onclick="notGetir()">Sorgula</button>
@@ -165,14 +225,17 @@
             }
 
             try {
-                // Girilen TC'yi anında şifrele (SHA-256)
-                const msgUint8 = new TextEncoder().encode(tc);
-                const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
-                const hashArray = Array.from(new Uint8Array(hashBuffer));
-                const girilenTcHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                // Girilen TC'yi CryptoJS ile şifrele (Güvenlik engellerine takılmaz)
+                const girilenTcHash = CryptoJS.SHA256(tc).toString();
 
                 // JSON'daki verileri getir
-                const ogrenciResponse = await fetch('ogrenciler.json');
+                let ogrenciResponse = await fetch('ogrenciler.json').catch(() => null);
+                if (!ogrenciResponse || !ogrenciResponse.ok) {
+                    ogrenciResponse = await fetch('/static/ogrenciler.json').catch(() => null);
+                }
+                if (!ogrenciResponse || !ogrenciResponse.ok) {
+                    throw new Error("Öğrenci dosyası okunamadı. Uygulamayı yerel olarak açıyorsanız veriler engellenmiş olabilir, lütfen Flask ile çalıştırın.");
+                }
                 const ogrenciler = await ogrenciResponse.json();
 
                 // Şifreli TC'yi eşleştiriyoruz
@@ -184,7 +247,13 @@
                     return;
                 }
 
-                const notlarResponse = await fetch('notlar.json');
+                let notlarResponse = await fetch('notlar.json').catch(() => null);
+                if (!notlarResponse || !notlarResponse.ok) {
+                    notlarResponse = await fetch('/static/notlar.json').catch(() => null);
+                }
+                if (!notlarResponse || !notlarResponse.ok) {
+                    throw new Error("Notlar dosyası sunucudan okunamadı.");
+                }
                 const notlar = await notlarResponse.json();
 
                 // Yeni notlar.json formatında "Ad Soyad" key'i üzerinden buluyoruz
@@ -237,8 +306,16 @@
 
                 const lgsPuan = parts[25];
                 const gnls = parts[26];
-                const snfs = parts[27];
-                const krms = parts[28];
+                const gnlsSayi = parseInt(gnls, 10);
+
+                let kurdeleHtml = "";
+                if (!isNaN(gnlsSayi) && gnlsSayi <= 50) {
+                    kurdeleHtml = `
+                        <div class="kurdele-container">
+                            <div class="kurdele">🎀 Öncelikli Kayıta Hak Kazandınız! 🎀</div>
+                        </div>
+                    `;
+                }
 
                 let detayHtml = `
                     <div style="text-align:center; margin-bottom:15px; font-size:15px; color:#555;">
@@ -247,14 +324,14 @@
                         <span><strong>Kitapçık:</strong> ${kt}</span>
                     </div>
                     
+                    ${kurdeleHtml}
+
                     <div class="puan-kutusu">
                         <span>LGS Puanı: <span style="font-size:28px; display:block;">${lgsPuan}</span></span>
                     </div>
 
                     <div class="sira-kutusu">
                         <span><strong>Genel Sıra:</strong> ${gnls}</span>
-                        <span><strong>Kurum Sıra:</strong> ${krms}</span>
-                        <span><strong>Sınıf Sıra:</strong> ${snfs}</span>
                     </div>
 
                     <table class="karne-tablosu">
@@ -300,7 +377,7 @@
 
             } catch (hata) {
                 console.error("Hata: ", hata);
-                sonucDiv.innerHTML = "Sistem hatası. Lütfen daha sonra tekrar deneyin.";
+                sonucDiv.innerHTML = `<strong>Sistem Hatası:</strong> ${hata.message}`;
                 sonucDiv.className = "hata";
             }
         }
