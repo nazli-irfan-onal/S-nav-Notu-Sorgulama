@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sınav Notu Sorgulama</title>
+    <title>Nazlı İrfan ÖNAL İHO Kayıt Kabul Sınav Sonucu</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         body {
@@ -185,7 +185,7 @@
 <body>
 
     <div class="container">
-        <h2>Deneme Sınavı Sorgulama</h2>
+        <h2>Nazlı İrfan ÖNAL İHO Kayıt Kabul Sınav Sonucu</h2>
         <p style="color: #666; font-size: 14px;">Sonucunuzu görmek için TC giriniz.</p>
 
         <input type="text" id="tcInput" placeholder="TC">
@@ -233,10 +233,13 @@
 
                 // Yeni notlar.json formatında "Ad Soyad" key'i üzerinden buluyoruz
                 const temizle = (metin) => {
-                    return metin.toLocaleLowerCase('tr-TR')
+                    if (!metin) return "";
+                    return metin.toString().trim().toLocaleLowerCase('tr-TR')
                         .replace(/ı/g, 'i').replace(/i̇/g, 'i')
                         .replace(/ğ/g, 'g').replace(/ü/g, 'u')
-                        .replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c');
+                        .replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c')
+                        .replace(/[^a-z0-9\s]/g, '') // Noktalama işaretlerini kaldır
+                        .replace(/\s+/g, ' '); // Fazla boşlukları tek boşluğa düşür
                 };
 
                 const adSoyad = temizle(bulunanOgrenci.ad + " " + bulunanOgrenci.soyad);
@@ -247,7 +250,11 @@
                     const jsonAdSoyad = temizle(k);
 
                     if (jsonAdSoyad === adSoyad) return true;
-                    if (jsonAdSoyad.replace(/\s/g, '') === adSoyad.replace(/\s/g, '')) return true;
+                    
+                    const strJson = jsonAdSoyad.replace(/\s/g, '');
+                    const strAdSoyad = adSoyad.replace(/\s/g, '');
+                    if (strJson === strAdSoyad) return true;
+                    if (strJson.includes(strAdSoyad) || strAdSoyad.includes(strJson)) return true;
 
                     const jsonKelimeler = jsonAdSoyad.split(/\s+/);
                     const jsonSoyad = jsonKelimeler[jsonKelimeler.length - 1];
@@ -282,35 +289,32 @@
                 const lgsPuan = parts[25];
                 const gnls = parts[26];
 
-                let tebrikHtml = '';
-                // Eğer öğrencinin genel sırası 50 ve altındaysa kutuyu ve animasyonu göster
-                if (parseInt(gnls) <= 50) {
-                    tebrikHtml = `
-                        <div class="tebrik-kutusu">
-                            <div class="kurdele">TEBRİKLER</div>
-                            <div class="on-kayit-mesaj">🎉 Ön Kayıt Hakkı Kazandınız! 🎉</div>
-                        </div>
-                    `;
+                // Sınava giren herkese ön kayıt hakkı kazandınız mesajını göster
+                let tebrikHtml = `
+                    <div class="tebrik-kutusu">
+                        <div class="kurdele">TEBRİKLER</div>
+                        <div class="on-kayit-mesaj">🎉 Ön Kayıt Hakkı Kazandınız! 🎉</div>
+                    </div>
+                `;
 
-                    // Ekranda kurdele (konfeti) patlatma efekti
-                    setTimeout(() => {
-                        var duration = 3 * 1000;
-                        var animationEnd = Date.now() + duration;
-                        var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999, colors: ['#e74c3c', '#ffd700', '#28a745', '#007bff'] };
+                // Ekranda kurdele (konfeti) patlatma efekti
+                setTimeout(() => {
+                    var duration = 3 * 1000;
+                    var animationEnd = Date.now() + duration;
+                    var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999, colors: ['#e74c3c', '#ffd700', '#28a745', '#007bff'] };
 
-                        function randomInRange(min, max) { return Math.random() * (max - min) + min; }
+                    function randomInRange(min, max) { return Math.random() * (max - min) + min; }
 
-                        var interval = setInterval(function() {
-                            var timeLeft = animationEnd - Date.now();
-                            if (timeLeft <= 0) { return clearInterval(interval); }
-                            var particleCount = 50 * (timeLeft / duration);
-                            if (typeof confetti === 'function') {
-                                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
-                                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
-                            }
-                        }, 250);
-                    }, 100);
-                }
+                    var interval = setInterval(function() {
+                        var timeLeft = animationEnd - Date.now();
+                        if (timeLeft <= 0) { return clearInterval(interval); }
+                        var particleCount = 50 * (timeLeft / duration);
+                        if (typeof confetti === 'function') {
+                            confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+                            confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+                        }
+                    }, 250);
+                }, 100);
 
                 let detayHtml = `
                     <div style="text-align:center; margin-bottom:15px; font-size:16px; color:#333; font-weight:bold;">
